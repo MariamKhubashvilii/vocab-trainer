@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "vocab-trainer-mk",
     "public": ".",
     "ignore": [
       "firebase.json",
@@ -16,7 +17,12 @@
     "headers": [
       {
         "source": "**/*.@(js|css)",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       }
     ]
   }
