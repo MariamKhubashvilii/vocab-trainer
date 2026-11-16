@@ -161,7 +161,7 @@
     if (type === 'meaning') {
       textOf = x => x.definition;
       label = 'What does it mean?';
-      prompt = '<b>' + esc(w.word) + '</b> <span class="muted">(' + esc(w.pos || '') + ')</span>';
+      prompt = '<span class="big">' + esc(w.word) + '</span> <span class="muted">' + esc(w.pos || '') + '</span>';
       correctText = w.definition;
     } else if (type === 'person') {
       textOf = x => x.person;
@@ -269,34 +269,35 @@
     const hardN = WORDS.filter(isHard).length;
     const n0 = poolFor(selTopics).length;
     app.innerHTML = `
-      <div class="card" id="daily"></div>
       <div class="card">
-        <h2>New quiz</h2>
-        <p class="muted">${WORDS.length} words in your database, ${known} practised so far. Words you miss come up more often.</p>
-        ${tooFew ? '<p class="feedback">Multiple choice needs at least 4 words. Add more words in data/words.js.</p>' : ''}
-        <label>Topics</label>
-        <div id="topics">${all.map(t => `
-          <label class="chk ${counts[t] ? '' : 'off'}"><input type="checkbox" value="${esc(t)}" ${selTopics.includes(t) ? 'checked' : ''} ${counts[t] ? '' : 'disabled'}> ${esc(t)} <span class="muted">${counts[t] ? '(' + counts[t] + ')' : '(no words yet)'}</span></label>`).join('')}
+        <h2>Start a quiz</h2>
+        <p class="muted">${WORDS.length.toLocaleString('en')} words, ${known.toLocaleString('en')} practised so far. Words you miss come back more often.</p>
+        ${tooFew ? '<p class="feedback">Multiple choice needs at least 4 words in the database.</p>' : ''}
+        <label id="topics-label">Topics</label>
+        <div id="topics" role="group" aria-labelledby="topics-label">${all.map(t => `
+          <label class="chk ${counts[t] ? '' : 'off'}" ${counts[t] ? '' : 'title="No words in this topic yet"'}><input type="checkbox" value="${esc(t)}" ${selTopics.includes(t) ? 'checked' : ''} ${counts[t] ? '' : 'disabled'}>${esc(t)} <span class="muted">${counts[t] || 0}</span></label>`).join('')}
         </div>
-        <div class="actions" style="margin-top:6px"><button class="secondary" id="t-all">All</button><button class="secondary" id="t-none">None</button></div>
-        <p class="muted" id="poolinfo"></p>
+        <div class="actions" style="margin-top:12px"><button class="secondary" id="t-all">Select all</button><button class="secondary" id="t-none">Clear</button></div>
+        <p class="muted" id="poolinfo" style="margin-top:12px"></p>
         <div class="row">
-          <div><label>Multiple choice</label><input type="number" id="c-mc" min="0" value="${Math.min(25, n0)}"></div>
-          <div><label>Sentences</label><input type="number" id="c-sentence" min="0" value="0"></div>
-          <div><label>Explain it</label><input type="number" id="c-define" min="0" value="0"></div>
-          <div><label>Paragraphs (3 words each)</label><input type="number" id="c-paragraph" min="0" value="0"></div>
+          <div><label for="c-mc">Multiple choice</label><input type="number" id="c-mc" min="0" value="${Math.min(25, n0)}"></div>
+          <div><label for="c-sentence">Sentences</label><input type="number" id="c-sentence" min="0" value="0"></div>
+          <div><label for="c-define">Explain it</label><input type="number" id="c-define" min="0" value="0"></div>
+          <div><label for="c-paragraph">Paragraphs</label><input type="number" id="c-paragraph" min="0" value="0"></div>
         </div>
-        <label class="chk ${hardN ? '' : 'off'}"><input type="checkbox" id="c-hard" ${hardN ? '' : 'disabled'}> Only my hard words <span class="muted">(${hardN} right now)</span></label>
-        <label>Which words?</label>
+        <p class="hint">Written tasks are optional. Each paragraph task uses 3 words.</p>
+        <label class="chk ${hardN ? '' : 'off'}"><input type="checkbox" id="c-hard" ${hardN ? '' : 'disabled'}>Only my hard words <span class="muted">${hardN}</span></label>
+        <label for="c-mode">Word selection</label>
         <select id="c-mode">
           <option value="weighted">Weak and new words more often</option>
           <option value="uniform">All words equally</option>
         </select>
-        <div class="actions"><button class="primary" id="start">Start quiz</button><button class="secondary" id="quick">Quick: multiple choice only</button></div>
+        <div class="actions"><button class="primary" id="start">Start quiz</button><button class="secondary" id="quick">Quick quiz, multiple choice</button></div>
       </div>
+      <div class="card" id="daily"></div>
       <div class="card">
-        <h2>How grading works</h2>
-        <p class="muted">Multiple choice is graded instantly. At the end you download a .md file with all your answers. Give that file to Claude and it grades the open-ended parts and gives feedback.</p>
+        <h2>How marking works</h2>
+        <p class="muted">Multiple choice is marked as you go. For written tasks you can get AI feedback at the end with your own Groq key, or download your answers as a .md file to share with a teacher or tutor.</p>
       </div>`;
 
     renderDaily(false);
@@ -305,7 +306,7 @@
       selTopics = boxes().filter(b => b.checked).map(b => b.value);
       saveSel();
       const n = poolFor(selTopics).length;
-      document.getElementById('poolinfo').textContent = n + ' word' + (n === 1 ? '' : 's') + ' in the selected topics.';
+      document.getElementById('poolinfo').textContent = n.toLocaleString('en') + ' word' + (n === 1 ? '' : 's') + ' in the selected topics.';
       document.getElementById('start').disabled = n === 0;
       document.getElementById('quick').disabled = n === 0;
     }
@@ -341,14 +342,14 @@
     if (q.kind === 'mc') {
       body = q.options.map((o, idx) => `<button class="opt" data-i="${idx}">${esc(o.text)}</button>`).join('') + '<div id="fb"></div>';
     } else {
-      body = (q.topic ? `<p class="hint">Topic idea: ${esc(q.topic)} (use any topic you like)</p>` : '') +
-        `<textarea id="ans" placeholder="Type your answer here"></textarea>
-         <div class="hint">Do it from memory. Do not look the word up first.</div>
+      body = (q.topic ? `<p class="hint" style="margin:-8px 0 14px">Topic idea: ${esc(q.topic)}. Any topic works too.</p>` : '') +
+        `<textarea id="ans" aria-label="Your answer" placeholder="Your answer"></textarea>
+         <div class="hint">Try it from memory before you look anything up.</div>
          <div class="actions"><button class="primary" id="next">${state.i + 1 === total ? 'Finish' : 'Next'}</button></div>`;
     }
     app.innerHTML = `
-      <div class="card">
-        <div class="progress"><span>Question ${state.i + 1} of ${total}</span><span>${q.kind === 'mc' ? 'Multiple choice' : 'Open-ended'}</span></div>
+      <div class="card sheet">
+        <div class="progress"><span>Question ${state.i + 1} of ${total}</span><span>${q.kind === 'mc' ? 'Multiple choice' : 'Written'}</span></div>
         <div class="bar"><i style="width:${pct}%"></i></div>
         <div class="qtype">${esc(q.label)}</div>
         <div class="prompt">${q.prompt}</div>
@@ -382,11 +383,12 @@
     saveStats();
     const w = q.w;
     document.getElementById('fb').innerHTML = `
-      <div class="feedback">
-        <b>${chosen.correct ? 'Correct.' : 'Not quite.'}</b>
-        <b>${esc(w.word)}</b> ${w.pron ? esc(w.pron) + ' ' : ''}(${esc(w.pos || '')}): ${esc(w.definition)}<br>
-        <i>${esc(w.example || '')}</i>${w.level ? ' <span class="tag">' + esc(w.level) + '</span>' : ''}${w.tone ? ' <span class="tag">' + esc(w.tone) + '</span>' : ''}${w.replaces && w.replaces.length ? '<br><span class="muted">Use instead of: ' + w.replaces.map(esc).join(', ') + '</span>' : ''}
-        ${w.collocations && w.collocations.length ? '<br>' + w.collocations.map(c => `<span class="tag">${esc(c)}</span>`).join('') : ''}
+      <div class="feedback" role="status">
+        <p class="verdict">${chosen.correct ? 'Correct' : 'Not quite'}</p>
+        <p><b>${esc(w.word)}</b> ${w.pron ? '<span class="muted">' + esc(w.pron) + '</span> ' : ''}<span class="muted">${esc(w.pos || '')}</span><br>${esc(w.definition)}</p>
+        ${w.example ? '<p><i>' + esc(w.example) + '</i></p>' : ''}
+        ${w.replaces && w.replaces.length ? '<p class="muted">Use instead of: ' + w.replaces.map(esc).join(', ') + '</p>' : ''}
+        <div>${w.level ? '<span class="tag">' + esc(w.level) + '</span>' : ''}${w.tone ? '<span class="tag">' + esc(w.tone) + '</span>' : ''}${w.collocations && w.collocations.length ? w.collocations.map(c => `<span class="tag">${esc(c)}</span>`).join('') : ''}</div>
       </div>
       <div class="actions"><button class="primary" id="next">${state.i + 1 === state.questions.length ? 'Finish' : 'Next'}</button></div>`;
     document.getElementById('next').addEventListener('click', advance);
@@ -408,20 +410,20 @@
       saveHistory();
     }
     app.innerHTML = `
-      <div class="card">
-        <h2>Done</h2>
+      <div class="card sheet">
+        <h2>Quiz complete</h2>
         ${mcIdx.length ? `<div class="score">${right} / ${mcIdx.length}</div><div class="muted">multiple choice</div>` : ''}
-        ${openCount ? `<p>${openCount} open-ended answer${openCount > 1 ? 's' : ''} waiting to be graded.</p>` : ''}
+        ${openCount ? `<p style="margin-top:14px">${openCount} written answer${openCount > 1 ? 's' : ''} still to mark.</p>` : ''}
         <div class="actions">
-          <button class="primary" id="dl">Download quiz as .md</button>
-          <button class="secondary" id="again">New quiz</button>
+          <button class="primary" id="dl">Download answers (.md)</button>
+          <button class="secondary" id="again">Start another</button>
         </div>
-        <p class="hint">Give the downloaded file to Claude to get the open-ended parts graded.</p>
+        ${openCount ? '<p class="hint">Send the file to a teacher or tutor for feedback on your written answers.</p>' : ''}
       </div>
       <div id="grader"></div>
-      ${misses.length ? '<div class="card"><h2>Missed</h2>' + misses.map(i => {
+      ${misses.length ? '<div class="card"><h2>Words you missed</h2>' + misses.map(i => {
         const q = state.questions[i], w = q.w;
-        return `<div class="miss"><b>${esc(w.word)}</b> (${esc(w.pos || '')}): ${esc(w.definition)}<br><i>${esc(w.example || '')}</i></div>`;
+        return `<div class="miss"><b>${esc(w.word)}</b> <span class="muted">${esc(w.pos || '')}</span><br>${esc(w.definition)}<br><i>${esc(w.example || '')}</i></div>`;
       }).join('') + '</div>' : ''}`;
     document.getElementById('dl').addEventListener('click', downloadMD);
     document.getElementById('again').addEventListener('click', viewHome);
@@ -514,24 +516,25 @@
     const useKey = !ok;
     let savedKey = '';
     try { savedKey = localStorage.getItem(GROQ_KEY_STORE) || ''; } catch (e) {}
-    const keyBlock = useKey ? `<label>Your Groq API key</label>
+    const keyBlock = useKey ? `<label for="g-key">Your Groq API key</label>
       <input type="password" id="g-key" autocomplete="off" placeholder="gsk_..." value="${esc(savedKey)}">
-      <p class="muted">Get a free key at console.groq.com. It stays in this browser and is sent only to Groq. <label style="display:inline"><input type="checkbox" id="g-remember" ${savedKey ? 'checked' : ''}> Remember it on this device</label></p>` : '';
-    box.innerHTML = `<div class="card"><h2>Grade with Groq</h2>
+      <p class="hint">Get a free key at console.groq.com. It stays in this browser and is only sent to Groq.</p>
+      <label class="chk" style="margin:10px 0 0"><input type="checkbox" id="g-remember" ${savedKey ? 'checked' : ''}>Remember it on this device</label>` : '';
+    box.innerHTML = `<div class="card"><h2>Get AI feedback</h2>
       ${keyBlock}
-      <label>Model</label>
+      <label for="g-model">Model</label>
       <select id="g-model">
         <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (best)</option>
         <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
         <option value="openai/gpt-oss-20b">openai/gpt-oss-20b (fast)</option>
       </select>
-      <div class="actions"><button class="primary" id="g-go">Grade ${open.length} open-ended answer${open.length > 1 ? 's' : ''}</button></div>
+      <div class="actions"><button class="primary" id="g-go">Grade ${open.length} written answer${open.length > 1 ? 's' : ''}</button></div>
       <div id="g-out"></div></div>`;
     document.getElementById('g-go').addEventListener('click', async () => {
       const btn = document.getElementById('g-go');
       const out = document.getElementById('g-out');
       const model = document.getElementById('g-model').value;
-      btn.disabled = true; out.innerHTML = '<p class="muted">Grading...</p>';
+      btn.disabled = true; out.innerHTML = '<p class="muted" role="status">Grading your answers...</p>';
       const items = open.map(({ q, a, n }) => ({
         n, type: q.label, task: plain(q.prompt),
         target_words: q.words.map(w => ({ word: w.word, pos: w.pos, definition: w.definition })),
@@ -576,7 +579,7 @@
         }
         out.innerHTML = results.map(res => {
           const it = open.find(x => x.n === res.n);
-          return `<div class="miss"><b>${it ? esc(it.q.word) : 'Item ' + esc(res.n)}</b> <span class="tag">${esc(res.score)} / 5</span><br>${esc(res.feedback || '')}<br><i>${esc(res.improved || '')}</i></div>`;
+          return `<div class="miss"><b>${it ? esc(it.q.word) : 'Item ' + esc(res.n)}</b> <span class="tag" style="margin-top:0">${esc(res.score)} / 5</span><br>${esc(res.feedback || '')}<br><i>${esc(res.improved || '')}</i></div>`;
         }).join('') + (parsed.review_words && parsed.review_words.length ? `<p class="muted">Review: ${parsed.review_words.map(esc).join(', ')}</p>` : '') +
           '<div class="actions"><button class="secondary" id="g-dl">Download graded .md</button></div>';
         document.getElementById('g-dl').addEventListener('click', () => {
@@ -616,7 +619,7 @@
     box.innerHTML = `<h2>Phrases to use today</h2>
       <p class="muted">Try to use at least one of these in your next message, email or class discussion.</p>` +
       picks.map(w => `<div class="pick"><b>${esc(w.word)}</b> <span class="tag">${esc(w.level || '')}</span>${w.replaces && w.replaces.length ? ' <span class="muted">instead of: ' + w.replaces.map(esc).join(', ') + '</span>' : ''}<br>${esc(w.definition)}<br><i>${esc(w.example || '')}</i></div>`).join('') +
-      '<div class="actions"><button class="secondary" id="d-more">Show 5 others</button></div>';
+      '<div class="actions"><button class="secondary" id="d-more">Show different ones</button></div>';
     document.getElementById('d-more').addEventListener('click', () => renderDaily(true));
   }
 
@@ -645,15 +648,17 @@
     }).join('');
     const sessRows = history.slice(-20).reverse().map(h => {
       const d = new Date(h.t);
-      return `<tr><td>${d.toLocaleDateString()} ${pad(d.getHours())}:${pad(d.getMinutes())}</td><td>${h.total ? h.right + ' / ' + h.total : '-'}</td><td>${esc((h.topics || []).join(', '))}</td></tr>`;
+      const tp = h.topics || [];
+      const topicText = tp.length > 3 ? tp.length + ' topics' : tp.join(', ');
+      return `<tr><td>${d.toLocaleDateString()} ${pad(d.getHours())}:${pad(d.getMinutes())}</td><td>${esc(topicText)}</td><td>${h.total ? h.right + ' / ' + h.total : '-'}</td></tr>`;
     }).join('');
     const HARD_SHOW = 10;
     const hardCard = `
       <div class="card">
         <h2>Hard words (${hard.length})</h2>
-        <p class="muted">Words you missed at least once and have not yet answered right more often than wrong. They leave this list as you learn them.</p>
+        <p class="muted">Words you have missed and not yet answered right more often than wrong. They drop off this list as you learn them.</p>
         ${hard.length ? `<div class="actions" style="margin:6px 0 10px"><button class="primary" id="p-hard">Practise my hard words</button></div>
-        <table><thead><tr><th>Word</th><th>Meaning</th><th>Right / wrong</th></tr></thead><tbody>${hard.map((w, i) => `<tr class="${i >= HARD_SHOW ? 'hard-extra' : ''}"${i >= HARD_SHOW ? ' style="display:none"' : ''}><td><b>${esc(w.word)}</b></td><td>${esc(w.definition)}</td><td>${stats[w.word].right || 0} / ${stats[w.word].wrong || 0}</td></tr>`).join('')}</tbody></table>
+        <table><thead><tr><th>Word</th><th>Meaning</th><th title="Right / wrong">Score</th></tr></thead><tbody>${hard.map((w, i) => `<tr class="${i >= HARD_SHOW ? 'hard-extra' : ''}"${i >= HARD_SHOW ? ' style="display:none"' : ''}><td><b>${esc(w.word)}</b></td><td>${esc(w.definition)}</td><td>${stats[w.word].right || 0} / ${stats[w.word].wrong || 0}</td></tr>`).join('')}</tbody></table>
         ${hard.length > HARD_SHOW ? `<div class="actions"><button class="secondary" id="p-more">See more (${hard.length - HARD_SHOW} more)</button></div>` : ''}` : '<p>No hard words yet. Take a quiz and the words you miss will show up here.</p>'}
       </div>`;
     app.innerHTML = `
@@ -663,11 +668,11 @@
       </div>
       <div class="card">
         <h2>Recent sessions</h2>
-        ${sessRows ? `<table><thead><tr><th>When</th><th>Multiple choice</th><th>Topics</th></tr></thead><tbody>${sessRows}</tbody></table>` : '<p class="muted">No sessions yet.</p>'}
+        ${sessRows ? `<table><thead><tr><th>When</th><th>Topics</th><th>Multiple choice</th></tr></thead><tbody>${sessRows}</tbody></table>` : '<p class="muted">No sessions yet.</p>'}
       </div>
       <div class="card">
         <h2>Backup</h2>
-        <p class="muted">${serverOn ? 'Your progress is also saved to data/progress.json in the trainer folder.' : 'Progress is stored in this browser only. Start the trainer with python3 server.py to also save it in a file, or use the backup below.'}</p>
+        <p class="muted">${serverOn ? 'Your progress is also saved to a file next to the app.' : 'Your progress is saved in this browser only. Download a backup to keep a copy or move it to another device.'}</p>
         <div class="actions"><button class="secondary" id="p-dl">Download backup</button><button class="secondary" id="p-up">Restore backup</button><input type="file" id="p-file" accept=".json" style="display:none"></div>
         <p class="hint" id="p-msg"></p>
       </div>
@@ -706,13 +711,12 @@
     const { counts, all } = topicCounts();
     app.innerHTML = `
       <div class="card">
-        <h2>Words (${WORDS.length})</h2>
+        <h2>Words (${WORDS.length.toLocaleString('en')})</h2>
         <div class="row">
-          <div><input type="text" id="q" placeholder="Search words or meanings"></div>
-          <div><select id="tf"><option value="">All topics</option>${all.filter(t => counts[t]).map(t => `<option>${esc(t)}</option>`).join('')}</select></div>
+          <div><input type="text" id="q" aria-label="Search words" placeholder="Search words"></div>
+          <div><select id="tf" aria-label="Filter by topic"><option value="">All topics</option>${all.filter(t => counts[t]).map(t => `<option>${esc(t)}</option>`).join('')}</select></div>
         </div>
-        <p class="hint">To add words, send them to Claude, or edit data/words.js.</p>
-        <table><thead><tr><th>Word</th><th>Meaning</th><th>Right / wrong</th></tr></thead><tbody id="rows"></tbody></table>
+        <table><thead><tr><th>Word</th><th>Meaning</th><th title="Right / wrong">Score</th></tr></thead><tbody id="rows"></tbody></table>
         <div class="actions"><button class="secondary" id="reset">Reset progress</button></div>
       </div>`;
     const rows = document.getElementById('rows');
