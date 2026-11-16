@@ -1,0 +1,12 @@
+.env
+data/progress.json
+.DS_Store
+__pycache__/
+*.pyc
+*.bak
+*.bak-*
+words-browser.html
+words-database.xlsx
+_install_openpyxl.py
+.firebase/
+firebase-debug.log
