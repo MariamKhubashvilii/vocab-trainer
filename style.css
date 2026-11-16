@@ -38,21 +38,22 @@
 
 :root {
   color-scheme: light dark;
-  --bg: #f3f5f4;
+  --bg: #f8f4f9;
   --surface: #ffffff;
-  --soft: #eaefec;
-  --ink: #101613;
-  --muted: #55625b;
-  --line: #d9e0dc;
-  --accent: #0c6b55;
-  --accent-hover: #095443;
+  --soft: #f0e8f3;
+  --ink: #1e1427;
+  --muted: #65586f;
+  --line: #e3d9e9;
+  --accent: #6a2c91;
+  --accent-hover: #55207a;
   --accent-ink: #ffffff;
-  --accent-soft: #e0efe9;
-  --good: #0c6b55;
-  --good-bg: #e0efe9;
+  --pink: #d9469b;
+  --accent-soft: #fce6f2;
+  --good: #1b7a4f;
+  --good-bg: #e2f4ea;
   --bad: #b3261e;
-  --bad-bg: #fbe9e7;
-  --shadow: 0 1px 0 rgba(16, 40, 30, 0.04), 0 14px 30px -18px rgba(16, 60, 45, 0.28);
+  --bad-bg: #fdebe8;
+  --shadow: 0 1px 0 rgba(60, 20, 90, 0.04), 0 14px 30px -18px rgba(90, 30, 120, 0.3);
   --r-sm: 10px;
   --r-lg: 16px;
   --font-text: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -60,18 +61,19 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d1210;
-    --surface: #151c19;
-    --soft: #1d2723;
-    --ink: #e9efeb;
-    --muted: #93a39b;
-    --line: #28342f;
-    --accent: #4fc9a4;
-    --accent-hover: #6fd8b7;
-    --accent-ink: #05150f;
-    --accent-soft: #15302a;
-    --good: #4fc9a4;
-    --good-bg: #15302a;
+    --bg: #150f1b;
+    --surface: #1e1626;
+    --soft: #2a1f35;
+    --ink: #f2ebf6;
+    --muted: #aa9bb6;
+    --line: #35283f;
+    --accent: #c78ef2;
+    --accent-hover: #d9a8f8;
+    --accent-ink: #1a0b26;
+    --pink: #f276bd;
+    --accent-soft: #3d1f3f;
+    --good: #6fd39b;
+    --good-bg: #163226;
     --bad: #ff8f85;
     --bad-bg: #3a1c19;
     --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 14px 30px -18px rgba(0, 0, 0, 0.7);
@@ -156,6 +158,7 @@ label.chk .muted { font-size: 0.82rem; font-weight: 400; }
 label.chk:hover { border-color: var(--accent); }
 label.chk:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
 label.chk:has(input:checked)::before { content: '\2713'; font-size: 0.8rem; color: var(--accent); }
+label.chk:has(input:checked) { border-color: var(--pink); }
 label.chk:has(input:checked) .muted { color: var(--muted); font-weight: 400; }
 label.chk:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 label.chk.off { opacity: 0.45; cursor: default; }
@@ -180,7 +183,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* quiz screen */
 .progress { font-size: 0.88rem; color: var(--muted); margin-bottom: 10px; display: flex; justify-content: space-between; gap: 12px; }
 .bar { height: 4px; background: var(--soft); border-radius: 2px; margin-bottom: 24px; overflow: hidden; }
-.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.25s ease; }
+.bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--pink)); border-radius: 2px; transition: width 0.25s ease; }
 .qtype { font-size: 0.93rem; font-weight: 500; color: var(--muted); margin-bottom: 8px; }
 .prompt { font-family: var(--font-display); font-weight: 560; font-size: 1.35rem; line-height: 1.3; letter-spacing: -0.01em; margin-bottom: 22px; }
 .prompt b { font-weight: 700; }
