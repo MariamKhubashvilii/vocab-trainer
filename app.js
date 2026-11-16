@@ -232,6 +232,7 @@
 
   // ---------- state + views ----------
   let state = null;
+  let exitNote = '';
 
   function setNav(view) {
     currentView = view;
@@ -268,8 +269,11 @@
     const tooFew = WORDS.length < 4;
     const hardN = WORDS.filter(isHard).length;
     const n0 = poolFor(selTopics).length;
+    const note = exitNote;
+    exitNote = '';
     app.innerHTML = `
       <div class="card">
+        ${note ? '<p class="feedback" role="status" style="margin:0 0 18px">' + esc(note) + '</p>' : ''}
         <h2>Start a quiz</h2>
         <p class="muted">${WORDS.length.toLocaleString('en')} words, ${known.toLocaleString('en')} practised so far. Words you miss come back more often.</p>
         ${tooFew ? '<p class="feedback">Multiple choice needs at least 4 words in the database.</p>' : ''}
@@ -349,13 +353,14 @@
     }
     app.innerHTML = `
       <div class="card sheet">
-        <div class="progress"><span>Question ${state.i + 1} of ${total}</span><span>${q.kind === 'mc' ? 'Multiple choice' : 'Written'}</span></div>
+        <div class="progress"><span>Question ${state.i + 1} of ${total}</span><button class="linkbtn" id="exit" type="button">End quiz</button></div>
         <div class="bar"><i style="width:${pct}%"></i></div>
         <div class="qtype">${esc(q.label)}</div>
         <div class="prompt">${q.prompt}</div>
         ${body}
       </div>`;
 
+    document.getElementById('exit').addEventListener('click', endEarly);
     if (q.kind === 'mc') {
       app.querySelectorAll('.opt').forEach(btn => btn.addEventListener('click', () => answerMC(q, parseInt(btn.dataset.i, 10))));
     } else {
@@ -399,6 +404,37 @@
     if (state.i >= state.questions.length) viewResults(); else viewQuestion();
   }
 
+  // Leave a quiz early. Multiple choice answers are already saved to the word stats
+  // as they are picked, so here we only record the session and show a short note.
+  // If written answers were typed, show the results screen so they are not lost.
+  function endEarly() {
+    const q = state.questions[state.i];
+    if (q.kind === 'open') {
+      const ta = document.getElementById('ans');
+      if (ta && ta.value.trim()) state.answers[state.i] = ta.value.trim();
+    }
+    let n = 0;
+    while (n < state.questions.length && state.answers[n] !== undefined) n++;
+    const kept = state.questions.slice(0, n);
+    if (!kept.length) { viewHome(); return; }
+    const hasWritten = kept.some((x, i) => x.kind === 'open' && state.answers[i]);
+    if (hasWritten) {
+      state.plannedTotal = state.questions.length;
+      state.questions = kept;
+      state.endedEarly = true;
+      viewResults();
+      return;
+    }
+    const mc = kept.map((x, i) => ({ x, a: state.answers[i] })).filter(o => o.x.kind === 'mc');
+    if (!mc.length) { viewHome(); return; }
+    const right = mc.filter(o => o.a && o.a.correct).length;
+    history.push({ t: state.started.getTime(), right, total: mc.length, open: 0, topics: state.topics || [], hard: !!state.hardOnly });
+    saveHistory();
+    const words = new Set(mc.map(o => o.x.word)).size;
+    exitNote = 'Quiz ended. ' + words + ' word' + (words === 1 ? '' : 's') + ' saved to your progress (' + right + ' of ' + mc.length + ' right).';
+    viewHome();
+  }
+
   function viewResults() {
     const mcIdx = state.questions.map((q, i) => q.kind === 'mc' ? i : -1).filter(i => i >= 0);
     const right = mcIdx.filter(i => state.answers[i] && state.answers[i].correct).length;
@@ -411,7 +447,8 @@
     }
     app.innerHTML = `
       <div class="card sheet">
-        <h2>Quiz complete</h2>
+        <h2>${state.endedEarly ? 'Quiz ended early' : 'Quiz complete'}</h2>
+        ${state.endedEarly ? `<p class="muted">You answered ${state.questions.length} of ${state.plannedTotal} questions. Your progress is saved.</p>` : ''}
         ${mcIdx.length ? `<div class="score">${right} / ${mcIdx.length}</div><div class="muted">multiple choice</div>` : ''}
         ${openCount ? `<p style="margin-top:14px">${openCount} written answer${openCount > 1 ? 's' : ''} still to mark.</p>` : ''}
         <div class="actions">
